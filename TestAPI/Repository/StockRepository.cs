@@ -54,7 +54,12 @@ namespace TestAPI.Repository
                 }
             }
 
-            return await stocks.ToListAsync();
+            if (query.PageNumber <= 0) query.PageNumber = 1;
+
+
+            var skipNumber = (query.PageNumber - 1) * query.PageSize;
+
+            return await stocks.Skip(skipNumber).Take(query.PageSize).ToListAsync();
         }
 
         public async Task<Stock?> GetByIdAsync(int id)
