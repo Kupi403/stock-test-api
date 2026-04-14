@@ -1,7 +1,11 @@
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using TestAPI.Data;
 using TestAPI.Interfaces;
+using TestAPI.Models;
 using TestAPI.Repository;
 namespace TestAPI
 {
@@ -25,6 +29,38 @@ namespace TestAPI
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
 
+            builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequiredLength = 12;
+
+            }).AddEntityFrameworkStores<ApplicationDBContext>();
+
+            builder.Services.AddAuthentication(opt =>
+            {
+                opt.DefaultAuthenticateScheme = "Bearer";
+                opt.DefaultScheme =
+                opt.DefaultChallengeScheme =
+                opt.DefaultForbidScheme =
+                opt.DefaultSignInScheme =
+                opt.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(opt =>
+            {
+                opt.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = builder.Configuration["JWT:Issuer"],
+                    ValidateAudience = true,
+                    ValidAudience = builder.Configuration["JWT:Audience"],
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JWT:SignInKey"])),
+
+                };
+            });
+
             builder.Services.AddScoped<IStockRepository, StockRepository>();
             builder.Services.AddScoped<ICommentRepository, CommentRepository>();
             var app = builder.Build();
@@ -37,6 +73,7 @@ namespace TestAPI
 
             app.UseHttpsRedirection();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
 
